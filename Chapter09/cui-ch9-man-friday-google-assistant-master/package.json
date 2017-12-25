@@ -1,0 +1,20 @@
+{
+  "name": "homebot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "todoist.js",
+  "dependencies": {
+    "express": "^4.16.2",
+    "moment": "^2.19.1",
+    "node-uuid": "^1.4.8",
+    "request": "^2.83.0",
+    "sync-request": "^4.1.0",
+    "uuid": "^3.1.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}

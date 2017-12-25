@@ -1,0 +1,271 @@
+#!/usr/bin/env node
+
+//hourlyTweeter.js
+//Author: Srini Janarthanam
+
+//This program is called hourly using an external scheduler in Heroku
+//It will send news articles to users based on their preferences as recorded in the database.
+
+var TwitterPackage = require('twitter');
+var request = require('request');
+
+var secret = {
+  consumer_key: 'YOUR_TWITTER_CONSUMER_KEY',
+  consumer_secret: 'YOUR_TWITTER_CONSUMER_SECTRET',
+  access_token_key: 'YOUR_TWITTER_ACCESS_TOKEN_KEY',
+  access_token_secret: 'YOUR_TWITTER_ACCESS_TOKEN_SECRET'
+}
+
+var Twitter = new TwitterPackage(secret);
+
+console.log("Hello World! I am the hourly twitter bot!");
+
+var MongoClient = require('mongodb').MongoClient;
+
+// Connection URL
+var url = 'mongodb://YOUR_DB_USERNAME:YOUR_DB_PWD@YOUR_DB_URL/twitterbot';
+
+var userInterests = [];
+
+loadUserData();
+
+
+
+function loadUserData(){
+    // Use connect method to connect to the server
+    MongoClient.connect(url, function(err, db) {
+      console.log("Connected successfully to server");
+
+      findDocuments(db, function(docs) {
+          //console.log("Found the following records");
+          for (var i = 0; i < docs.length; i++){
+              var user = {};
+              user.screen_name = docs[i].screen_name;
+              user.user_interest = docs[i].user_interest;
+              userInterests.push(user);
+            
+          }
+          db.close();
+          console.log(userInterests);
+          
+          //tweet to those followers who have 
+          //expressed interest in specific categories
+          tweetUserSpecificNews();
+
+      });
+    });
+}
+
+
+function tweetUserSpecificNews(){
+    console.log('Tweeting personalised news');
+    for (var i=0; i < userInterests.length; i++){
+        var user = userInterests[i];
+        
+        var screen_name = user.screen_name;
+        var interest = user.user_interest;
+        var status_id = null;
+        //get sources
+        request({
+            url: 'https://newsapi.org/v1/sources?category=' + interest +                                                             '&apiKey=YOUR_NEWS_API_KEY',
+            method: 'GET'
+        },
+        function (error, response, body) {
+            //response is from the bot
+            if (!error && response.statusCode == 200) {
+                // Print out the response body
+                var botResponse = JSON.parse(body);
+                //console.log(botResponse);
+                var sources = [];
+                for (var i = 0; i < botResponse.sources.length; i++){
+                    //console.log('adding.. ' + botResponse.sources[i].id)
+                    sources.push(botResponse.sources[i].id)
+                }
+
+                tweetFromRandomSource(sources, screen_name, status_id); 
+
+            } else {
+                console.log('Sorry. No new');
+            }
+        });
+    }
+}
+
+
+
+
+
+function searchUserSpecificHashtags(){
+    for (var i=0; i < userInterests.length; i++){
+        var user = userInterests[i];
+        
+        if (user.type == 'hashtag'){
+            searchAndTweet(user.hashtag, 'popular', user.screen_name, user.in_reply_to_status_id);
+        }
+    }
+
+}
+
+
+function searchAndTweet(hashtag, resultType, tweetTo, inResponseTo){
+    var params = {
+        q: hashtag,  // REQUIRED
+        result_type: resultType,
+        lang: 'en'
+    }
+
+    Twitter.get('search/tweets', params, function(err, data) {
+      // if there no errors
+        if (!err) {
+            console.log('Found tweets: ' + data.statuses.length);
+            console.log(data.statuses[1].text);
+            tweet(data.statuses[1].text, tweetTo, inResponseTo)
+        }
+        // if unable to Search a tweet
+        else {
+          console.log('Something went wrong while SEARCHING...');
+        }
+    });
+}
+
+
+function getAllSourcesAndTweet(){
+    var sources = [];
+    console.log('getting sources...')
+    request({
+            url: 'https://newsapi.org/v1/sources?apiKey=YOUR_NEWS_API_KEY',
+            method: 'GET'
+        },
+        function (error, response, body) {
+            //response is from the bot
+            if (!error && response.statusCode == 200) {
+                // Print out the response body
+                var botResponse = JSON.parse(body);
+                for (var i = 0; i < botResponse.sources.length; i++){
+                    //console.log('adding.. ' + botResponse.sources[i].id)
+                    sources.push(botResponse.sources[i].id)
+                }
+                
+                tweetFromRandomSource(sources, null, null);  
+                
+            } else {
+                console.log('Sorry. No news sources!');
+            }
+        });
+}
+
+
+
+function tweetFromRandomSource(sources, screen_name, status_id){
+    var max = sources.length;
+    var randomSource = sources[Math.floor(Math.random() * (max + 1))];
+    topNewsTweeter(randomSource, screen_name, status_id);
+}
+    
+
+
+//newsTopNewsTweeter('cnn');
+
+function topNewsTweeter(newsSource, screen_name, status_id){
+    
+    request({
+            url: 'https://newsapi.org/v1/articles?source=' + newsSource +                                                             '&apiKey=YOUR_NEWS_API_KEY',
+            method: 'GET'
+        },
+        function (error, response, body) {
+            //response is from the bot
+            if (!error && response.statusCode == 200) {
+                // Print out the response body
+                var botResponse = JSON.parse(body);
+                //console.log(botResponse);
+                tweetTopArticle(botResponse.articles, screen_name, status_id);
+                
+            } else {
+                console.log('Sorry. No new');
+            }
+        });
+    
+}
+
+function tweetTopArticle(articles, screen_name, status_id){
+    var article = articles[0];
+    tweet(article.title + " " + article.url, screen_name, status_id);
+}
+
+
+function tweet(statusMsg, screen_name, status_id){
+    
+    console.log('Sending tweet to: ' + screen_name);
+    var msg = statusMsg;
+    if (screen_name != null){
+        msg = '@' + screen_name + ' ' + statusMsg;
+    }
+    console.log('Tweet:' + msg);
+        
+      
+    Twitter.post('statuses/update', {
+            status: msg
+        }, function(err, response) {
+            // if there was an error while tweeting
+            if (err) {
+                console.log('Something went wrong while TWEETING...');
+                console.log(err);
+            }
+            else if (response) {
+                console.log('Tweeted!!!');
+                //console.log(response)
+            }
+
+        }); 
+}
+
+
+//search('#brexit', 'popular')
+function search(hashtag, resultType){
+    var params = {
+        q: hashtag,  // REQUIRED
+        result_type: resultType,
+        lang: 'en'
+    }
+
+    Twitter.get('search/tweets', params, function(err, data) {
+      // if there no errors
+        if (!err) {
+            console.log('Found tweets: ' + data.statuses.length);
+            console.log('First one: ' + data.statuses[1].text);
+        }
+        // if unable to Search a tweet
+        else {
+          console.log('Something went wrong while SEARCHING...');
+        }
+    });
+}
+
+
+//var retweetId = 'ANY_TWEET_ID';
+//retweet(retweetId);
+
+function retweet(retweetId){
+    Twitter.post('statuses/retweet/', {
+        id: retweetId
+    }, function(err, response) {
+        if (err) {
+            console.log('Something went wrong while RETWEETING...');
+            console.log(err);
+        }
+        else if (response) {
+            console.log('Retweeted!!!');
+            console.log(response)
+        }
+    }); 
+}
+
+
+function findDocuments(db, callback) {
+  // Get the documents collection
+  var collection = db.collection('users');
+  // Find some documents
+  collection.find({}).toArray(function(err, docs) {
+    callback(docs);
+  });
+}

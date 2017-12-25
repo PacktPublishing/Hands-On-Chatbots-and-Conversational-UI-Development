@@ -1,0 +1,16 @@
+{
+  "name": "weatherman-bot-server",
+  "version": "1.0.0",
+  "description": "Weatherman bot fbmi server",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Srini Janarthanam",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.15.2",
+    "express": "^4.14.0",
+    "request": "^2.72.0"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "foodie-bot",
+  "version": "1.0.0",
+  "description": "Demo bot using MS Bot Builder",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node app.js"
+  },
+  "author": "Srini Janarthanam",
+  "license": "ISC",
+  "dependencies": {
+    "botbuilder": "^3.10.1",
+    "request": "^2.82.0",
+    "restify": "^5.2.0"
+  }
+}
