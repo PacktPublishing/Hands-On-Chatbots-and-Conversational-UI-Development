@@ -1,5 +1,5 @@
-# Hands-On Chatbot and Conversational UI Development
-This is the code repository for [Hands-On Chatbot and Conversational UI Development](https://www.packtpub.com/application-development/practical-conversational-uis?utm_source=GitHub&utm_medium=repo&utm_campaign=9781788294669). It contains all the supporting project files necessary to work through the book from start to finish.
+# Hands-On Chatbots and Conversational UI Development
+This is the code repository for [Hands-On Chatbots and Conversational UI Development](https://www.packtpub.com/application-development/practical-conversational-uis?utm_source=GitHub&utm_medium=repo&utm_campaign=9781788294669). It contains all the supporting project files necessary to work through the book from start to finish.
 
 ## About the Book
 
